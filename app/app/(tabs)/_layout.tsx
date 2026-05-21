@@ -52,6 +52,10 @@ export default function TabsLayout() {
         name="leaderboard"
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏆" label="Reyting" focused={focused} /> }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="👤" label="Profil" focused={focused} /> }}
+      />
     </Tabs>
   );
 }

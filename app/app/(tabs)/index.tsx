@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } 
 import { router } from 'expo-router';
 import { C } from '../../constants/colors';
 import { getProfile, daysUntilExam } from '../../lib/store';
-import { UserProfile, SUBJECT_LABELS } from '../../lib/types';
+import { UserProfile, SUBJECT_LABELS, EXAM_TYPE_LABELS } from '../../lib/types';
 import { api } from '../../lib/api';
 
 export default function HomeScreen() {
@@ -55,7 +55,7 @@ export default function HomeScreen() {
           <Text style={styles.countdownLabel}>kun qoldi</Text>
         </View>
         <View style={styles.countdownRight}>
-          <Text style={styles.countdownExam}>{profile.exam_type.toUpperCase()} ga</Text>
+          <Text style={styles.countdownExam}>{EXAM_TYPE_LABELS[profile.exam_type]} ga</Text>
           <Text style={styles.countdownGoal}>Maqsad: {profile.goal_score} ball</Text>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${readiness}%` }]} />

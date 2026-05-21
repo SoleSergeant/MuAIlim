@@ -29,7 +29,7 @@ export default function LoginScreen() {
           <Text style={styles.logoText}>م</Text>
         </View>
         <Text style={styles.appName}>MuAIlim</Text>
-        <Text style={styles.tagline}>DTM, Attestat va Milliy sertifikat{'\n'}imtihonlariga AI bilan tayyorlan</Text>
+        <Text style={styles.tagline}>Kirish imtixoni, Attestat va Milliy sertifikat{'\n'}imtihonlariga AI bilan tayyorlan</Text>
       </View>
 
       <View style={styles.pillsRow}>
@@ -43,7 +43,7 @@ export default function LoginScreen() {
       <View style={styles.features}>
         {[
           { icon: '🎯', text: 'Zaifliklaringni aniq topadi' },
-          { icon: '🤖', text: 'Claude AI bilan tushuntiradi' },
+          { icon: '🤖', text: 'AI bilan xatolaringni tushuntiradi' },
           { icon: '📈', text: 'Real ball bashorat qiladi' },
           { icon: '🔥', text: 'Streak bilan motivatsiya' },
         ].map((f) => (

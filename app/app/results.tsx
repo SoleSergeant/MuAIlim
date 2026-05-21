@@ -57,7 +57,7 @@ export default function ResultsScreen() {
           {result.predicted_dtm_score && (
             <View style={styles.predBadge}>
               <Text style={styles.predBadgeText}>
-                DTM taxminiy: ~{result.predicted_dtm_score} ball
+                Taxminiy ball: ~{result.predicted_dtm_score} / 200
               </Text>
             </View>
           )}
@@ -112,6 +112,49 @@ export default function ResultsScreen() {
                 </View>
               </TouchableOpacity>
             ))}
+          </View>
+        )}
+
+        {/* Timing analysis */}
+        {result.timing && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>VAQT TAHLILI</Text>
+            <View style={styles.timingCard}>
+              <View style={styles.timingRow}>
+                <Text style={styles.timingLabel}>Jami sarflangan vaqt</Text>
+                <Text style={styles.timingValue}>
+                  {Math.floor(result.timing.total_secs / 60)}m {result.timing.total_secs % 60}s
+                </Text>
+              </View>
+              <View style={[styles.timingRow, styles.timingBorder]}>
+                <Text style={styles.timingLabel}>O'rtacha (1 savol)</Text>
+                <Text style={[styles.timingValue, result.timing.avg_per_question > 70 ? styles.timingWarn : styles.timingOk]}>
+                  {result.timing.avg_per_question}s
+                </Text>
+              </View>
+              {Object.entries(result.timing.by_difficulty).map(([diff, secs]) => {
+                const labels: Record<string, string> = { easy: 'Oson', medium: "O'rta", hard: 'Qiyin' };
+                const bench: Record<string, number> = { easy: 45, medium: 60, hard: 90 };
+                const isOver = secs > (bench[diff] ?? 60) * 1.4;
+                return (
+                  <View key={diff} style={[styles.timingRow, styles.timingBorder]}>
+                    <Text style={styles.timingLabel}>{labels[diff] ?? diff} savollar</Text>
+                    <Text style={[styles.timingValue, isOver ? styles.timingWarn : styles.timingOk]}>
+                      {secs}s / savol
+                    </Text>
+                  </View>
+                );
+              })}
+              {result.timing.flags.length > 0 && (
+                <View style={styles.timingFlags}>
+                  {result.timing.flags.map((f, i) => (
+                    <View key={i} style={styles.timingFlag}>
+                      <Text style={styles.timingFlagText}>⚠ {f}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
         )}
 
@@ -207,6 +250,16 @@ const styles = StyleSheet.create({
   weaknessRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   weaknessPct: { fontSize: 16, fontWeight: '700' },
   priorityDot: { width: 8, height: 8, borderRadius: 4 },
+  timingCard: { backgroundColor: C.bgSecondary, borderRadius: 14, borderWidth: 0.5, borderColor: C.border, overflow: 'hidden' },
+  timingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  timingBorder: { borderTopWidth: 0.5, borderColor: C.border },
+  timingLabel: { fontSize: 13, color: C.textSecondary },
+  timingValue: { fontSize: 13, fontWeight: '600', color: C.text },
+  timingOk: { color: C.green },
+  timingWarn: { color: C.orange },
+  timingFlags: { borderTopWidth: 0.5, borderColor: C.border, padding: 12, gap: 6 },
+  timingFlag: { backgroundColor: '#FFF8E1', borderRadius: 8, padding: 10 },
+  timingFlagText: { fontSize: 12, color: '#7C5500', lineHeight: 18 },
   ctaRow: { gap: 10 },
   ctaGreen: { backgroundColor: C.green, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
   ctaGreenText: { color: C.white, fontSize: 16, fontWeight: '600' },

@@ -33,10 +33,16 @@ export interface MockResult {
   total_questions: number;
   correct_count: number;
   score_pct: number;
-  by_subject: Record<string, { correct: number; total: number }>;
+  by_subject: Record<string, { correct: number; total: number; total_secs?: number }>;
   weakness_topics: WeaknessTopic[];
   predicted_dtm_score?: number;
   ai_summary: string;
+  timing?: {
+    total_secs: number;
+    avg_per_question: number;
+    by_difficulty: Record<string, number>;
+    flags: string[];
+  };
 }
 
 export interface LeaderboardEntry {
@@ -70,7 +76,7 @@ export const SUBJECT_LABELS: Record<Subject, string> = {
 };
 
 export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
-  dtm: 'DTM',
+  dtm: 'Kirish imtixoni',
   attestat_9: 'Attestat (9-sinf)',
   teacher: "O'qituvchi attestati",
   national_cert: 'Milliy sertifikat',

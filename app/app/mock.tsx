@@ -18,7 +18,7 @@ export default function MockScreen() {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [timeLeft, setTimeLeft] = useState(5400);
   const [qStartTime, setQStartTime] = useState(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -41,9 +41,8 @@ export default function MockScreen() {
   const loadMock = async () => {
     try {
       const profile = await getProfile();
-      const subjects = profile.subjects.join(',');
       const [qRes, sessRes] = await Promise.all([
-        api.getMockQuestions(subjects, 10),
+        api.getMockQuestions('math,history,uzbek', 90),
         api.startMock(profile.user_id, profile.exam_type),
       ]);
       setQuestions(qRes.questions);
@@ -123,7 +122,7 @@ export default function MockScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={C.green} />
         <Text style={styles.loadingText}>AI tahlil qilmoqda...</Text>
-        <Text style={styles.loadingSubText}>Claude natijalarni ko'rib chiqmoqda</Text>
+        <Text style={styles.loadingSubText}>AI natijalarni ko'rib chiqmoqda...</Text>
       </View>
     );
   }

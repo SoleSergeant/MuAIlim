@@ -31,6 +31,10 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
   await AsyncStorage.setItem(KEYS.profile, JSON.stringify(profile));
 }
 
+export async function clearProfile(): Promise<void> {
+  await AsyncStorage.removeItem(KEYS.profile);
+}
+
 export async function isOnboarded(): Promise<boolean> {
   const raw = await AsyncStorage.getItem(KEYS.profile);
   return raw !== null;
