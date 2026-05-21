@@ -1,0 +1,38 @@
+# Environment variables (never commit credentials)
+.env
+.env.local
+.env*.local
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+backend/venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / Expo
+app/node_modules/
+app/.expo/
+app/dist/
+app/web-build/
+app/expo-env.d.ts
+app/.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Native builds
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+app/ios/
+app/android/
+
+# OS
+.DS_Store
+Thumbs.db
+*.pem
