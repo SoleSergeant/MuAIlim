@@ -234,26 +234,36 @@ async def get_personalized_questions(
     count: int = Query(5, ge=3, le=15),
     difficulty: str = Query("medium"),
 ):
+    # Also check ingested questions
+    all_qs = DEMO_QUESTIONS + _load_ingested()
     existing = [
-        q for q in DEMO_QUESTIONS
+        q for q in all_qs
         if q["subject"] == subject and q["topic"].lower() == topic.lower()
     ]
 
     if len(existing) >= count:
         return {"questions": existing[:count], "source": "database", "total": count}
 
+    # Generate the remaining questions via AI (Groq is fast enough)
+    needed = count - len(existing)
     try:
-        ai_qs = await generate_questions(Subject(subject), topic, count - len(existing), Difficulty(difficulty))
+        ai_qs = await generate_questions(Subject(subject), topic, needed, Difficulty(difficulty))
         for q in ai_qs:
             q["id"] = f"ai_{uuid.uuid4().hex[:8]}"
             q["subject"] = subject
+            q["topic"] = topic
             q["source"] = "ai_generated"
             _question_store[q["id"]] = q
         combined = existing + ai_qs
         return {"questions": combined[:count], "source": "mixed", "total": len(combined[:count])}
     except Exception:
-        fallback = [q for q in DEMO_QUESTIONS if q["subject"] == subject]
-        return {"questions": fallback[:count], "source": "fallback", "total": len(fallback[:count])}
+        # Only return questions that actually match the topic — never mix topics
+        if existing:
+            return {"questions": existing[:count], "source": "database", "total": len(existing[:count])}
+        raise HTTPException(
+            status_code=404,
+            detail=f"Bu mavzu bo'yicha savollar topilmadi: {topic}"
+        )
 
 
 @router.get("/{question_id}")

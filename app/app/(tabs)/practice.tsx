@@ -1,20 +1,45 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { C } from '../../constants/colors';
 import { api } from '../../lib/api';
 import { getProfile } from '../../lib/store';
 import { SUBJECT_LABELS, Subject } from '../../lib/types';
 
+const API = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
+
 const SUBJECT_ICONS: Record<Subject, string> = {
   math: '📐', history: '📜', uzbek: '✍️',
   english: '🇬🇧', physics: '⚛️', chemistry: '🧪', biology: '🧬',
 };
 
+// Real topics from the uploaded question bank
 const QUICK_TOPICS: Record<Subject, string[]> = {
-  math: ['Kvadrat tenglamalar', 'Logarifmlar', 'Trigonometriya', 'Foizlar'],
-  history: ['Amir Temur davri', 'Mustaqillik davri', 'Jadidchilik', 'Ipak yo\'li'],
-  uzbek: ['Gap bo\'laklari', 'So\'z turkumlari', 'Adabiyot', 'Imlo qoidalari'],
+  math: [
+    'Kvadrat tenglamalar',
+    'Chiziqli tenglamalar sistemasi',
+    'Chiziqli tengsizliklar',
+    'Modulli tenglamalar',
+    "Qisqa ko'paytirish formulalari",
+  ],
+  history: [
+    'Amir Temur davri',
+    'Mustaqillik davri',
+    'Sovet davri',
+    "Qadimgi O'zbek davlatlari",
+    'Ikkinchi Jahon urushi',
+    'Buxoro xonligining tashkil topishi',
+    'Dashti qipchoqdagi siyosiy vaziyat',
+    "Zahiriddin Muhammad Bobur va Muhammad Shayboniyxon munosabatlari",
+  ],
+  uzbek: [
+    "Gap bo'laklari",
+    "So'z turkumlari",
+    'Imlo qoidalari',
+    'Morfologiya',
+    'Sintaksis',
+    'Adabiyot',
+  ],
   english: ['Tenses', 'Conditionals', 'Passive Voice', 'Modal verbs'],
   physics: ['Mexanika', 'Elektr', 'Optika', 'Termodinamika'],
   chemistry: ['Kimyoviy reaksiyalar', 'Elementlar', 'Organik kimyo'],
@@ -27,6 +52,8 @@ export default function PracticeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState('');
+  const [testCode, setTestCode] = useState('');
+  const [codeLoading, setCodeLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -47,6 +74,22 @@ export default function PracticeScreen() {
 
   const startPractice = (topic: string, subject: Subject) => {
     router.push({ pathname: '/personalized', params: { topic, subject } });
+  };
+
+  const joinTeacherTest = async () => {
+    const code = testCode.trim();
+    if (!code) return;
+    setCodeLoading(true);
+    try {
+      const res = await fetch(`${API}/api/teacher/take/${code}`);
+      if (!res.ok) throw new Error('Test topilmadi');
+      router.push({ pathname: '/take-test', params: { test_id: code } });
+      setTestCode('');
+    } catch {
+      Alert.alert('Xatolik', "Test topilmadi. Kodni tekshiring.");
+    } finally {
+      setCodeLoading(false);
+    }
   };
 
   return (
@@ -87,6 +130,30 @@ export default function PracticeScreen() {
           ))}
         </View>
       )}
+
+      {/* Teacher test code entry */}
+      <View style={styles.teacherTestCard}>
+        <Text style={styles.teacherTestTitle}>👨‍🏫 O'qituvchi testi</Text>
+        <Text style={styles.teacherTestSub}>O'qituvchingiz bergan test kodini kiriting</Text>
+        <View style={styles.teacherTestRow}>
+          <TextInput
+            style={styles.teacherTestInput}
+            value={testCode}
+            onChangeText={setTestCode}
+            placeholder="Test kodi (masalan: test_abc12345)"
+            placeholderTextColor={C.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity
+            style={[styles.teacherTestBtn, (!testCode.trim() || codeLoading) && { opacity: 0.5 }]}
+            onPress={joinTeacherTest}
+            disabled={!testCode.trim() || codeLoading}
+          >
+            <Text style={styles.teacherTestBtnText}>→</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Mock exam CTA */}
       <TouchableOpacity style={styles.mockCta} onPress={() => router.push('/mock')}>
@@ -158,4 +225,22 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: C.border, backgroundColor: C.bgSecondary,
   },
   topicChipText: { fontSize: 13, color: C.text },
+  teacherTestCard: {
+    marginHorizontal: 20, marginBottom: 16, padding: 16,
+    backgroundColor: C.bgSecondary, borderRadius: 16,
+    borderWidth: 0.5, borderColor: C.border,
+  },
+  teacherTestTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginBottom: 3 },
+  teacherTestSub: { fontSize: 12, color: C.textSecondary, marginBottom: 12 },
+  teacherTestRow: { flexDirection: 'row', gap: 10 },
+  teacherTestInput: {
+    flex: 1, borderWidth: 0.5, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.text,
+    backgroundColor: C.bg,
+  },
+  teacherTestBtn: {
+    width: 44, height: 44, backgroundColor: C.green, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  teacherTestBtnText: { color: C.white, fontSize: 18, fontWeight: '700' },
 });

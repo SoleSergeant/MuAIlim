@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { MockAnswer, Question, MockResult, LeaderboardEntry, WeaknessTopic } from './types';
+import { MockAnswer, Question, MockResult, LeaderboardEntry, WeaknessTopic, Roadmap } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -79,5 +79,16 @@ export const api = {
   reviewCard: (card_id: string, user_id: string, correct: boolean) =>
     req(`/api/notebook/review/${card_id}?user_id=${user_id}&correct=${correct}`, {
       method: 'POST',
+    }),
+
+  getRoadmap: (user_id: string, goal_score: number, days_remaining: number, subjects: string) =>
+    req<Roadmap>(
+      `/api/analysis/roadmap/${user_id}?goal_score=${goal_score}&days_remaining=${days_remaining}&subjects=${encodeURIComponent(subjects)}`
+    ),
+
+  chat: (message: string, history: { role: string; content: string }[]) =>
+    req<{ reply: string; reply_en: string }>('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
     }),
 };

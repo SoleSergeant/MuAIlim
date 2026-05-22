@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Animated,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { C } from '../constants/colors';
-import { MockResult, SUBJECT_LABELS, WeaknessTopic, Subject } from '../lib/types';
+import { MockResult, WrongQuestion, SUBJECT_LABELS, WeaknessTopic, Subject } from '../lib/types';
 import { api } from '../lib/api';
+import { canExplain, incrementExplainCount, FREE_EXPLAIN_PER_DAY } from '../lib/subscription';
+import { getProfile } from '../lib/store';
 
 const PRIORITY_COLORS = {
   high: C.red,
@@ -17,9 +19,52 @@ const PRIORITY_COLORS = {
 export default function ResultsScreen() {
   const { data } = useLocalSearchParams<{ data: string }>();
   const [result, setResult] = useState<MockResult | null>(null);
-  const [explaining, setExplaining] = useState<string | null>(null);
-  const [explanation, setExplanation] = useState<string | null>(null);
   const [showWeakness, setShowWeakness] = useState<WeaknessTopic | null>(null);
+  const [expandedWrong, setExpandedWrong] = useState<string | null>(null);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [loadingExplanation, setLoadingExplanation] = useState<string | null>(null);
+
+  const fetchExplanation = async (wq: WrongQuestion) => {
+    if (explanations[wq.question_id]) return;
+    setLoadingExplanation(wq.question_id);
+    try {
+      // Check daily explain limit
+      const profile = await getProfile();
+      const allowed = await canExplain(profile.is_premium);
+      if (!allowed) {
+        Alert.alert(
+          'Kunlik limit tugadi',
+          `Bepul rejimda kuniga ${FREE_EXPLAIN_PER_DAY} ta AI tushuntirish. Premium bilan cheksiz tushuntirish oling.`,
+          [
+            { text: 'Premium →', onPress: () => router.push('/premium') },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+        setLoadingExplanation(null);
+        return;
+      }
+
+      const res = await api.explainAnswer({
+        question_text: wq.text,
+        options: wq.options,
+        correct_index: wq.correct_index,
+        selected_index: wq.selected_index,
+        subject: wq.subject,
+        topic: wq.topic,
+      });
+      await incrementExplainCount();
+      setExplanations(prev => ({ ...prev, [wq.question_id]: res.explanation }));
+    } catch {
+      const correctOpt = wq.options[wq.correct_index] ?? '';
+      const selectedOpt = wq.options[wq.selected_index] ?? '';
+      setExplanations(prev => ({
+        ...prev,
+        [wq.question_id]: `Siz "${selectedOpt}" tanladingiz, lekin to'g'ri javob "${correctOpt}". "${wq.topic}" mavzusini qayta ko'rib chiqing.`,
+      }));
+    } finally {
+      setLoadingExplanation(null);
+    }
+  };
 
   useEffect(() => {
     if (data) {
@@ -93,7 +138,7 @@ export default function ResultsScreen() {
         {result.weakness_topics.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>ZAIFLIK XARITASI</Text>
-            <Text style={styles.sectionHint}>Maqsadli mashq qilish uchun bosing</Text>
+            <Text style={styles.sectionHint}>Bosing — shu mavzu bo'yicha maqsadli mashq boshlash uchun</Text>
             {result.weakness_topics.map((w, i) => (
               <TouchableOpacity
                 key={i}
@@ -158,6 +203,93 @@ export default function ResultsScreen() {
           </View>
         )}
 
+        {/* Wrong questions review */}
+        {result.wrong_questions && result.wrong_questions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>XATO SAVOLLAR ({result.wrong_questions.length} ta)</Text>
+            <Text style={styles.sectionHint}>Bosing — savolni ko'ring va AI tushuntirishini so'rang</Text>
+            {result.wrong_questions.map((wq, i) => {
+              const isExpanded = expandedWrong === wq.question_id;
+              const explanation = explanations[wq.question_id];
+              const isLoading = loadingExplanation === wq.question_id;
+              const DIFF_LABELS: Record<string, string> = { easy: 'Oson', medium: "O'rta", hard: 'Qiyin' };
+              return (
+                <TouchableOpacity
+                  key={wq.question_id}
+                  style={styles.wrongCard}
+                  onPress={() => setExpandedWrong(isExpanded ? null : wq.question_id)}
+                  activeOpacity={0.8}
+                >
+                  {/* Header row */}
+                  <View style={styles.wrongHeader}>
+                    <View style={styles.wrongNumBadge}>
+                      <Text style={styles.wrongNumText}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.wrongTopic}>{wq.topic}</Text>
+                      <Text style={styles.wrongDiff}>{DIFF_LABELS[wq.difficulty] ?? wq.difficulty} · {wq.time_spent_secs}s</Text>
+                    </View>
+                    <Text style={styles.wrongChevron}>{isExpanded ? '▲' : '▼'}</Text>
+                  </View>
+
+                  {/* Expanded content */}
+                  {isExpanded && (
+                    <View style={styles.wrongBody}>
+                      <Text style={styles.wrongQuestion}>{wq.text}</Text>
+
+                      {/* Options */}
+                      <View style={styles.wrongOptions}>
+                        {wq.options.map((opt, idx) => {
+                          const isCorrect = idx === wq.correct_index;
+                          const isWrong = idx === wq.selected_index && !isCorrect;
+                          if (!isCorrect && !isWrong) return null;
+                          return (
+                            <View
+                              key={idx}
+                              style={[
+                                styles.wrongOption,
+                                isCorrect && styles.wrongOptionCorrect,
+                                isWrong && styles.wrongOptionWrong,
+                              ]}
+                            >
+                              <Text style={[styles.wrongOptionLabel, isCorrect && { color: C.white }, isWrong && { color: C.white }]}>
+                                {isCorrect ? '✓' : '✗'} {String.fromCharCode(65 + idx)}
+                              </Text>
+                              <Text style={[styles.wrongOptionText, isCorrect && { color: C.white }, isWrong && { color: C.white }]}>
+                                {opt}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      {/* Explanation */}
+                      {explanation ? (
+                        <View style={styles.explanationBox}>
+                          <Text style={styles.explanationLabel}>🤖 Tushuntirish</Text>
+                          <Text style={styles.explanationText}>{explanation}</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.explainBtn}
+                          onPress={() => fetchExplanation(wq)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <ActivityIndicator size="small" color={C.green} />
+                          ) : (
+                            <Text style={styles.explainBtnText}>🤖 AI tushuntirsin</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* CTA */}
         <View style={styles.ctaRow}>
           {result.weakness_topics.length > 0 && (
@@ -175,7 +307,7 @@ export default function ResultsScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.ctaOutline} onPress={() => router.push('/mock')}>
-            <Text style={styles.ctaOutlineText}>Yana mock yechish</Text>
+            <Text style={styles.ctaOutlineText}>Yangi mock imtihon boshlash</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -201,7 +333,7 @@ export default function ResultsScreen() {
               <Text style={styles.overlayBtnText}>Maqsadli mashq boshlash →</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowWeakness(null)}>
-              <Text style={styles.overlayCancelText}>Bekor qilish</Text>
+              <Text style={styles.overlayCancelText}>Yoping</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -265,6 +397,43 @@ const styles = StyleSheet.create({
   ctaGreenText: { color: C.white, fontSize: 16, fontWeight: '600' },
   ctaOutline: { paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 0.5, borderColor: C.border },
   ctaOutlineText: { color: C.textSecondary, fontSize: 15 },
+  // Wrong questions review
+  wrongCard: {
+    backgroundColor: C.bgSecondary, borderRadius: 14, borderWidth: 0.5,
+    borderColor: C.border, marginBottom: 10, overflow: 'hidden',
+  },
+  wrongHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  wrongNumBadge: {
+    width: 28, height: 28, borderRadius: 8, backgroundColor: C.red + '20',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  wrongNumText: { fontSize: 13, fontWeight: '700', color: C.red },
+  wrongTopic: { fontSize: 13, fontWeight: '600', color: C.text },
+  wrongDiff: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
+  wrongChevron: { fontSize: 11, color: C.textTertiary },
+  wrongBody: { borderTopWidth: 0.5, borderColor: C.border, padding: 14, gap: 12 },
+  wrongQuestion: { fontSize: 14, color: C.text, lineHeight: 22, fontWeight: '500' },
+  wrongOptions: { gap: 8 },
+  wrongOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10,
+    borderRadius: 10, borderWidth: 0.5, borderColor: C.border, backgroundColor: C.bg,
+  },
+  wrongOptionCorrect: { backgroundColor: C.green, borderColor: C.green },
+  wrongOptionWrong: { backgroundColor: C.red, borderColor: C.red },
+  wrongOptionLabel: { fontSize: 13, fontWeight: '700', color: C.text, width: 28 },
+  wrongOptionText: { flex: 1, fontSize: 13, color: C.text, lineHeight: 18 },
+  explanationBox: {
+    backgroundColor: C.greenLight, borderRadius: 10, padding: 12,
+    borderWidth: 0.5, borderColor: C.greenBorder,
+  },
+  explanationLabel: { fontSize: 11, fontWeight: '700', color: C.greenDark, marginBottom: 6 },
+  explanationText: { fontSize: 13, color: C.text, lineHeight: 20 },
+  explainBtn: {
+    borderWidth: 1, borderColor: C.green, borderRadius: 10, paddingVertical: 10,
+    alignItems: 'center',
+  },
+  explainBtnText: { fontSize: 13, color: C.green, fontWeight: '600' },
+
   overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   overlayCard: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 12 },
   overlayTitle: { fontSize: 20, fontWeight: '700', color: C.text },

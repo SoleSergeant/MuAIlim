@@ -10,6 +10,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(teacher)" />
         <Stack.Screen name="mock" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="results" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="personalized" options={{ animation: 'slide_from_right' }} />

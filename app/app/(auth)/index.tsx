@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { C } from '../../constants/colors';
 import { isOnboarded, saveProfile, DEMO_PROFILE } from '../../lib/store';
+import MuAIlimLogo from '../../components/MuAIlimLogo';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,8 @@ export default function LoginScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={C.green} />
+        <MuAIlimLogo size="large" />
+        <ActivityIndicator size="large" color={C.green} style={{ marginTop: 32 }} />
       </View>
     );
   }
@@ -25,11 +27,9 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoArea}>
-        <View style={styles.logoMark}>
-          <Text style={styles.logoText}>م</Text>
-        </View>
-        <Text style={styles.appName}>MuAIlim</Text>
-        <Text style={styles.tagline}>Kirish imtixoni, Attestat va Milliy sertifikat{'\n'}imtihonlariga AI bilan tayyorlan</Text>
+        <MuAIlimLogo size="large" />
+        <Text style={styles.slogan}>Test emas, rivojlanish!</Text>
+        <Text style={styles.tagline}>DTM, Attestat va Milliy sertifikat imtihonlariga{'\n'}AI yordamida samarali tayyorlan</Text>
       </View>
 
       <View style={styles.pillsRow}>
@@ -42,10 +42,10 @@ export default function LoginScreen() {
 
       <View style={styles.features}>
         {[
-          { icon: '🎯', text: 'Zaifliklaringni aniq topadi' },
-          { icon: '🤖', text: 'AI bilan xatolaringni tushuntiradi' },
-          { icon: '📈', text: 'Real ball bashorat qiladi' },
-          { icon: '🔥', text: 'Streak bilan motivatsiya' },
+          { icon: '🎯', text: 'Zaif mavzularingizni aniq topadi' },
+          { icon: '🤖', text: 'Har bir xatoni AI bilan tushuntiradi' },
+          { icon: '📈', text: "Haqiqiy ball oralig'ini bashorat qiladi" },
+          { icon: '🔥', text: "Streak tizimi bilan o'qishni odatga aylantiradi" },
         ].map((f) => (
           <View key={f.text} style={styles.featureRow}>
             <Text style={styles.featureIcon}>{f.icon}</Text>
@@ -66,7 +66,27 @@ export default function LoginScreen() {
             router.replace('/(tabs)');
           }}
         >
-          <Text style={styles.demoBtnText}>Demo rejimda kirish (Jasur, 12-kun streak)</Text>
+          <Text style={styles.demoBtnText}>🎓 O'quvchi rejimida ko'rish (Jasur, DTM)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.demoBtn}
+          onPress={async () => {
+            await saveProfile({
+              user_id: 'demo_teacher',
+              display_name: 'Abdullayev S.',
+              exam_type: 'teacher',
+              subjects: ['math'],
+              goal_score: 100,
+              exam_date: '2026-09-01',
+              streak: 0,
+              is_premium: false,
+              grade_levels: ['5-9', '10-11'],
+            });
+            router.replace('/(teacher)');
+          }}
+        >
+          <Text style={styles.demoBtnText}>👨‍🏫 O'qituvchi rejimida ko'rish (Matematika)</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -76,14 +96,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg, padding: 24, justifyContent: 'space-between' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logoArea: { alignItems: 'center', marginTop: 60 },
-  logoMark: {
-    width: 64, height: 64, borderRadius: 18,
-    backgroundColor: C.green, alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-  },
-  logoText: { color: C.white, fontSize: 28, fontWeight: '600' },
-  appName: { fontSize: 32, fontWeight: '700', color: C.text, letterSpacing: -0.5, marginBottom: 8 },
-  tagline: { fontSize: 15, color: C.textSecondary, textAlign: 'center', lineHeight: 22 },
+  logoArea: { alignItems: 'center', marginTop: 60, gap: 8 },
+  slogan: { fontSize: 16, fontWeight: '700', color: '#7C3AED', letterSpacing: 0.2 },
+  tagline: { fontSize: 14, color: C.textSecondary, textAlign: 'center', lineHeight: 22, marginTop: 2 },
   pillsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' },
   pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 100, backgroundColor: C.greenLight, borderWidth: 0.5, borderColor: C.greenBorder },
   pillText: { fontSize: 12, color: C.greenDark, fontWeight: '500' },

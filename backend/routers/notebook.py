@@ -2,14 +2,9 @@ import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Query
 from services.supabase_service import db
+from routers.mock import _notebook_store, _next_review  # shared store
 
 router = APIRouter(prefix="/notebook", tags=["notebook"])
-
-_notebook_store: dict[str, list] = {}
-
-
-def _next_review(interval_days: int) -> str:
-    return (datetime.utcnow() + timedelta(days=interval_days)).isoformat()
 
 
 @router.post("/add")

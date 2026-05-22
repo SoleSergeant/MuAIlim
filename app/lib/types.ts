@@ -28,6 +28,18 @@ export interface WeaknessTopic {
   priority: 'high' | 'medium' | 'low';
 }
 
+export interface WrongQuestion {
+  question_id: string;
+  text: string;
+  options: string[];
+  correct_index: number;
+  selected_index: number;
+  subject: Subject;
+  topic: string;
+  difficulty: Difficulty;
+  time_spent_secs: number;
+}
+
 export interface MockResult {
   session_id: string;
   total_questions: number;
@@ -43,6 +55,35 @@ export interface MockResult {
     by_difficulty: Record<string, number>;
     flags: string[];
   };
+  wrong_questions?: WrongQuestion[];
+}
+
+export interface RoadmapTopic {
+  subject: string;
+  icon: string;
+  topic: string;
+  accuracy_pct: number | null;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface RoadmapWeek {
+  week_num: number;
+  date_label: string;
+  theme: string;
+  is_review_week: boolean;
+  focus_topics: RoadmapTopic[];
+  status: 'current' | 'upcoming';
+}
+
+export interface Roadmap {
+  weeks: RoadmapWeek[];
+  total_weeks: number;
+  days_remaining: number;
+  current_readiness_pct: number;
+  goal_score: number;
+  needed_pct: number;
+  has_data: boolean;
+  ai_advice: string;
 }
 
 export interface LeaderboardEntry {
@@ -63,6 +104,7 @@ export interface UserProfile {
   exam_date: string;
   streak: number;
   is_premium: boolean;
+  grade_levels?: string[]; // teacher only: ['1-4', '5-9', '10-11']
 }
 
 export const SUBJECT_LABELS: Record<Subject, string> = {

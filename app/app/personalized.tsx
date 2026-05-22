@@ -33,9 +33,22 @@ export default function PersonalizedScreen() {
       const topic = params.topic || 'Zaif mavzular';
       const subject = params.subject || p.subjects[0];
       const res = await api.getPersonalizedQuestions(topic, subject, 5);
+      if (!res.questions || res.questions.length === 0) {
+        Alert.alert('Savollar topilmadi', `"${topic}" mavzusi bo'yicha savollar hali tayyorlanmagan.`, [
+          { text: 'Orqaga', onPress: () => router.back() }
+        ]);
+        return;
+      }
       setQuestions(res.questions);
-    } catch {
-      Alert.alert('Xatolik', 'Savollarni yuklashda muammo.');
+    } catch (e: any) {
+      const msg = e?.message || '';
+      if (msg.includes('404') || msg.includes('topilmadi')) {
+        Alert.alert('Mavzu topilmadi', `Bu mavzu bo'yicha savollar hali yo'q. Boshqa mavzuni tanlang.`, [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      } else {
+        Alert.alert('Xatolik', 'Savollarni yuklashda muammo.');
+      }
     } finally {
       setLoading(false);
     }

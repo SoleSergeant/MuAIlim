@@ -36,3 +36,4 @@ app/android/
 .DS_Store
 Thumbs.db
 *.pem
+backend/data/ona_tili_savollar.pdf

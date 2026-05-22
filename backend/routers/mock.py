@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
 from models.schemas import MockSubmitRequest, MockResult
 from services.claude_service import analyze_mock_results
@@ -8,6 +9,45 @@ from routers.questions import DEMO_QUESTIONS, _question_store
 router = APIRouter(prefix="/mock", tags=["mock"])
 
 _session_store: dict[str, dict] = {}
+
+# Shared notebook store — imported by notebook router as well
+_notebook_store: dict[str, list] = {}
+
+
+def _next_review(days: int) -> str:
+    return (datetime.utcnow() + timedelta(days=days)).isoformat()
+
+
+def _save_wrong_to_notebook(user_id: str, wrong_questions: list):
+    """Auto-add wrong questions from mock to the spaced-repetition notebook."""
+    if user_id not in _notebook_store:
+        _notebook_store[user_id] = []
+    existing_q_ids = {e["question_id"] for e in _notebook_store[user_id]}
+    for wq in wrong_questions:
+        qid = wq.get("question_id", "")
+        if not qid or qid in existing_q_ids:
+            continue  # skip duplicates
+        opts = wq.get("options", [])
+        ci = wq.get("correct_index", 0)
+        correct_answer = opts[ci] if opts and ci < len(opts) else ""
+        entry = {
+            "id": uuid.uuid4().hex,
+            "user_id": user_id,
+            "question_id": qid,
+            "question_text": wq.get("text", ""),
+            "correct_answer": correct_answer,
+            "subject": wq.get("subject", ""),
+            "topic": wq.get("topic", ""),
+            "options": opts,
+            "correct_index": ci,
+            "selected_index": wq.get("selected_index", -1),
+            "repetition": 0,
+            "interval_days": 1,
+            "next_review": _next_review(0),  # due immediately
+            "mastered": False,
+        }
+        _notebook_store[user_id].append(entry)
+        existing_q_ids.add(qid)
 
 
 @router.post("/start")
@@ -35,6 +75,9 @@ async def submit_mock(req: MockSubmitRequest):
         "result": result,
         "status": "completed",
     }
+
+    # ── Auto-save wrong answers to notebook ──────────────────────────
+    _save_wrong_to_notebook(req.user_id, result.get("wrong_questions", []))
 
     try:
         await db.insert("mock_sessions", {

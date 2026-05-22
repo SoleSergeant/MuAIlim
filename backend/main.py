@@ -3,7 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import questions, mock, analysis, leaderboard, notebook
+from routers import questions, mock, analysis, leaderboard, notebook, teacher, chat
 
 app = FastAPI(title="MuAIlim API", version="1.0.0")
 
@@ -20,6 +20,8 @@ app.include_router(mock.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
 app.include_router(leaderboard.router, prefix="/api")
 app.include_router(notebook.router, prefix="/api")
+app.include_router(teacher.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 
 @app.get("/")

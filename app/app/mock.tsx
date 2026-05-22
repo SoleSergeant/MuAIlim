@@ -8,6 +8,7 @@ import { C } from '../constants/colors';
 import { api } from '../lib/api';
 import { getProfile } from '../lib/store';
 import { Question, MockAnswer, SUBJECT_LABELS } from '../lib/types';
+import { canStartMock, incrementMockCount, FREE_MOCK_PER_WEEK } from '../lib/subscription';
 
 export default function MockScreen() {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -29,6 +30,7 @@ export default function MockScreen() {
   }, []);
 
   useEffect(() => {
+    if (!questions.length) return; // don't start timer until questions are loaded
     timerRef.current = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) { clearInterval(timerRef.current!); handleSubmit(); return 0; }
@@ -41,14 +43,38 @@ export default function MockScreen() {
   const loadMock = async () => {
     try {
       const profile = await getProfile();
+
+      // Check weekly mock limit for free users
+      const allowed = await canStartMock(profile.is_premium);
+      if (!allowed) {
+        Alert.alert(
+          'Haftalik limit tugadi',
+          `Bepul rejimda haftasiga ${FREE_MOCK_PER_WEEK} ta mock imtihon ishlash mumkin. Premium bilan cheksiz mock yeching.`,
+          [
+            { text: '⭐ Premium →', onPress: () => { setLoading(false); router.push('/premium'); } },
+            { text: 'Orqaga', style: 'cancel', onPress: () => { setLoading(false); router.back(); } },
+          ]
+        );
+        return;
+      }
+
+      // DTM = 90 questions (3 subjects × 30); single-subject = 30 questions
+      const subjectsStr = profile.subjects.join(',');
+      const questionCount = profile.exam_type === 'dtm' ? 90 : 30;
+
       const [qRes, sessRes] = await Promise.all([
-        api.getMockQuestions('math,history,uzbek', 90),
+        api.getMockQuestions(subjectsStr, questionCount),
         api.startMock(profile.user_id, profile.exam_type),
       ]);
       setQuestions(qRes.questions);
       setSessionId(sessRes.session_id);
+      // Set timer: 1 minute per question
+      setTimeLeft(qRes.questions.length * 60);
+
+      // Count this mock usage
+      await incrementMockCount();
     } catch (e) {
-      Alert.alert('Xatolik', 'Savollarni yuklashda muammo. Internet ulanishini tekshiring.');
+      Alert.alert('Xatolik', 'Savollar yuklanmadi. Internet ulanishingizni tekshiring.');
     } finally {
       setLoading(false);
     }
@@ -121,8 +147,8 @@ export default function MockScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={C.green} />
-        <Text style={styles.loadingText}>AI tahlil qilmoqda...</Text>
-        <Text style={styles.loadingSubText}>AI natijalarni ko'rib chiqmoqda...</Text>
+        <Text style={styles.loadingText}>Natijalar tahlil qilinmoqda...</Text>
+        <Text style={styles.loadingSubText}>AI zaifliklaringizni aniqlayapti</Text>
       </View>
     );
   }
@@ -137,9 +163,9 @@ export default function MockScreen() {
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => Alert.alert('Chiqish', "Mock ni to'xtatmoqchimisiz?", [
-          { text: 'Yo\'q' },
-          { text: 'Ha', onPress: () => router.back(), style: 'destructive' },
+        <TouchableOpacity onPress={() => Alert.alert('Imtihonni to\'xtatish', "Natijalar saqlanmaydi. Davom etasizmi?", [
+          { text: 'Davom etish' },
+          { text: 'To\'xtatish', onPress: () => router.back(), style: 'destructive' },
         ])}>
           <Text style={styles.closeBtn}>✕</Text>
         </TouchableOpacity>
@@ -217,7 +243,7 @@ export default function MockScreen() {
             onPress={confirmAnswer}
             disabled={selected === null}
           >
-            <Text style={styles.confirmBtnText}>Tasdiqlash</Text>
+            <Text style={styles.confirmBtnText}>Javobni tasdiqlash</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.nextBtn} onPress={nextQuestion}>
