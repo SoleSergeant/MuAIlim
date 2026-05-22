@@ -8,4 +8,4 @@ if not exist .env (
   exit /b 1
 )
 call venv\Scripts\activate
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8002
